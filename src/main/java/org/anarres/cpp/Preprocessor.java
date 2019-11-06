@@ -109,11 +109,9 @@ public class Preprocessor implements Closeable {
 
     /* Miscellaneous support. */
     private int counter;
-    private final Set<String> onceseenpaths = new HashSet<String>();
     private final List<VirtualFile> includes = new ArrayList<VirtualFile>();
 
 
-    private List<String> frameworkspath;
     private final Set<Feature> features;
     private final Set<Warning> warnings;
     private VirtualFileSystem filesystem;
@@ -132,7 +130,6 @@ public class Preprocessor implements Closeable {
 
         this.counter = 0;
 
-        this.frameworkspath = new ArrayList<String>();
         this.features = EnumSet.noneOf(Feature.class);
         this.warnings = EnumSet.noneOf(Warning.class);
         
@@ -420,25 +417,6 @@ public class Preprocessor implements Closeable {
     public void addMacro(@Nonnull String name)
             throws LexerException {
         addMacro(name, "1");
-    }
-
-    /**
-     * Sets the Objective-C frameworks path used by this Preprocessor.
-     */
-    /* Note for future: Create an IncludeHandler? */
-    public void setFrameworksPath(@Nonnull List<String> path) {
-        this.frameworkspath = path;
-    }
-
-    /**
-     * Returns the Objective-C frameworks path used by this
-     * Preprocessor.
-     *
-     * This list may be freely modified by user code.
-     */
-    @Nonnull
-    public List<String> getFrameworksPath() {
-        return frameworkspath;
     }
 
     /**
@@ -1170,7 +1148,7 @@ public class Preprocessor implements Closeable {
                 tok = source_skipline(true);
             } else {
                 error(tok,
-                        "Expected string or header, not " + tok.getText());
+                        "Expected <virtual-filename>, not " + tok.getText());
                 switch (tok.getType()) {
                     case NL:
                     case EOF:
@@ -1721,12 +1699,12 @@ public class Preprocessor implements Closeable {
                     break;
 
                 case INVALID:
+                default:
                     if (getFeature(Feature.CSYNTAX))
                         error(tok, String.valueOf(tok.getValue()));
+                    // return all other tokens unchanged
                     return tok;
 
-                default:
-                    throw new InternalException("Bad token " + tok);
                 // break;
 
                 case HASH:

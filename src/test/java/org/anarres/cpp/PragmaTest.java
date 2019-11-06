@@ -30,7 +30,7 @@ public class PragmaTest {
 
         CharSource source = Files.asCharSource(file, Charsets.UTF_8);
         CppReader r = new CppReader(source.openBufferedStream());
-        r.getPreprocessor().setListener(new DefaultPreprocessorListener());
+        r.getPreprocessor().setListener(new DefaultPreprocessorListener(PreprocessorLogLevel.OFF));
         String output = CharStreams.toString(r);
         r.close();
         LOG.info("Output: " + output);
