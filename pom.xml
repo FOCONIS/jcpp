@@ -9,7 +9,7 @@
 
 	<groupId>org.anarres</groupId>
 	<artifactId>jcpp</artifactId>
-	<version>1.4.14-FOC2</version>
+	<version>1.4.14-FOC3-SNAPSHOT</version>
 	<name>jcpp</name>
 	<description>An embeddable C Preprocessor for the JVM.</description>
 	<url>https://github.com/shevek/jcpp</url>
@@ -26,7 +26,7 @@
 		<connection>scm:git:git@github.com:FOCONIS/jcpp.git</connection>
 		<developerConnection>scm:git:git@github.com:FOCONIS/jcpp.git</developerConnection>
 		<url>scm:git:git@github.com:FOCONIS/jcpp.git</url>
-		<tag>v1.4.14-FOC2</tag>
+		<tag>HEAD</tag>
 	</scm>
 	
 	
