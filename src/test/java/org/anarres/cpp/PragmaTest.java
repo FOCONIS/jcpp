@@ -25,7 +25,7 @@ public class PragmaTest {
 
     @Test
     public void testPragma() throws Exception {
-        File file = new File("build/resources/test/pragma.c");
+        File file = new File("src/test/resources/pragma.c");
         assertTrue(file.exists());
 
         CharSource source = Files.asCharSource(file, Charsets.UTF_8);

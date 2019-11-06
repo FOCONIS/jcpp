@@ -33,7 +33,7 @@ public class RegressionTest {
     public static List<Object[]> data() throws Exception {
         List<Object[]> out = new ArrayList<Object[]>();
 
-        File dir = new File("build/resources/test/regression");
+        File dir = new File("src/test/resources/regression");
         for (File inFile : dir.listFiles(new PatternFilenameFilter(".*\\.in"))) {
             String name = Files.getNameWithoutExtension(inFile.getName());
             File outFile = new File(dir, name + ".out");
