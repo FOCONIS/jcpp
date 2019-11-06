@@ -34,9 +34,12 @@ public class DefaultPreprocessorListener implements PreprocessorListener {
 
     private int errors;
     private int warnings;
+    private final PreprocessorLogLevel logLevel;
 
-    public DefaultPreprocessorListener() {
+    public DefaultPreprocessorListener(final PreprocessorLogLevel logLevel) {
         clear();
+        this.logLevel = logLevel;
+
     }
 
     public void clear() {
@@ -54,10 +57,6 @@ public class DefaultPreprocessorListener implements PreprocessorListener {
         return warnings;
     }
 
-    protected void print(@Nonnull String msg) {
-        LOG.info(msg);
-    }
-
     /**
      * Handles a warning.
      *
@@ -70,8 +69,11 @@ public class DefaultPreprocessorListener implements PreprocessorListener {
             String msg)
             throws LexerException {
         warnings++;
-        print(source.getName() + ":" + line + ":" + column
-                + ": warning: " + msg);
+        if (logLevel == PreprocessorLogLevel.OFF) {
+          LOG.trace("{}:{}:{}: {}", source.getName(), line, column, msg);
+        } else {
+          LOG.warn("{}:{}:{}: {}", source.getName(), line, column, msg);
+        }
     }
 
     /**
@@ -86,8 +88,11 @@ public class DefaultPreprocessorListener implements PreprocessorListener {
             String msg)
             throws LexerException {
         errors++;
-        print(source.getName() + ":" + line + ":" + column
-                + ": error: " + msg);
+        if (logLevel == PreprocessorLogLevel.FAIL) {
+          throw new LexerException("Error at " + line + ":" + column + ": " + msg);
+        } else {
+          LOG.error("{}:{}:{}: {}", source.getName(), line, column, msg);
+        }
     }
 
     @Override

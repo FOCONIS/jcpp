@@ -35,8 +35,6 @@ public enum Feature {
     KEEPALLCOMMENTS,
     DEBUG,
     /** Supports lexing of objective-C. */
-    OBJCSYNTAX,
-    INCLUDENEXT,
-    /** Random extensions. */
-    PRAGMA_ONCE
+    OBJCSYNTAX
+
 }

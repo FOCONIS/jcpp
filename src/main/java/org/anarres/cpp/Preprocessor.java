@@ -161,6 +161,25 @@ public class Preprocessor implements Closeable {
     }
 
     /**
+     * Constructor to get a full functional preprocessor.
+     */
+    public Preprocessor(final String input, final String sourceName,
+        final @Nonnull PreprocessorLogLevel logLevel, final VirtualFileSystem filesystem) {
+      this(getLexer(input, sourceName));
+      setFileSystem(filesystem);
+      setListener(new DefaultPreprocessorListener(logLevel));
+    }
+
+    private static @Nonnull Source getLexer(final String input, final String sourceName) {
+      return new StringLexerSource(input, true) {
+          @Override
+          public String getName() {
+              return sourceName;
+          }
+      };
+    }
+
+    /**
      * Sets the VirtualFileSystem used by this Preprocessor.
      */
     public void setFileSystem(@Nonnull VirtualFileSystem filesystem) {
@@ -1175,29 +1194,6 @@ public class Preprocessor implements Closeable {
         }
     }
 
-    protected void pragma_once(@Nonnull Token name)
-            throws IOException, LexerException {
-        Source s = this.source;
-        if (!onceseenpaths.add(s.getPath())) {
-            Token mark = pop_source(true);
-            // FixedTokenSource should never generate a linemarker on exit.
-            if (mark != null)
-                push_source(new FixedTokenSource(Arrays.asList(mark)), true);
-        }
-    }
-
-    protected void pragma(@Nonnull Token name, @Nonnull List<Token> value)
-            throws IOException,
-            LexerException {
-        if (getFeature(Feature.PRAGMA_ONCE)) {
-            if ("once".equals(name.getText())) {
-                pragma_once(name);
-                return;
-            }
-        }
-        warning(name, "Unknown #" + "pragma: " + name.getText());
-    }
-
     /* For #error and #warning. */
     private void error(@Nonnull Token pptok, boolean is_error)
             throws IOException,
@@ -1974,6 +1970,23 @@ public class Preprocessor implements Closeable {
         }
         for (Source s : inputs) {
             s.close();
+        }
+    }
+
+    /**
+     * Returns the parsed string.
+     */
+    public String getString() {
+        try (CppReader reader = new CppReader(this)) {
+          char[] arr = new char[8 * 1024];
+          StringBuilder buffer = new StringBuilder();
+          int numCharsRead;
+          while ((numCharsRead = reader.read(arr, 0, arr.length)) != -1) {
+              buffer.append(arr, 0, numCharsRead);
+          }
+          return buffer.toString();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
         }
     }
 
