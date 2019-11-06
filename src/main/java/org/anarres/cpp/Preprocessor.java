@@ -112,10 +112,6 @@ public class Preprocessor implements Closeable {
     private final Set<String> onceseenpaths = new HashSet<String>();
     private final List<VirtualFile> includes = new ArrayList<VirtualFile>();
 
-    /* Support junk to make it work like cpp */
-    private List<String> quoteincludepath;	/* -iquote */
-
-    private List<String> sysincludepath;		/* -I */
 
     private List<String> frameworkspath;
     private final Set<Feature> features;
@@ -136,12 +132,18 @@ public class Preprocessor implements Closeable {
 
         this.counter = 0;
 
-        this.quoteincludepath = new ArrayList<String>();
-        this.sysincludepath = new ArrayList<String>();
         this.frameworkspath = new ArrayList<String>();
         this.features = EnumSet.noneOf(Feature.class);
         this.warnings = EnumSet.noneOf(Warning.class);
-        this.filesystem = new JavaFileSystem();
+        
+        this.filesystem = new VirtualFileSystem() {
+          
+          @Override
+          public VirtualFile getFile(String path) {
+            return null;
+          }
+        };
+        
         this.listener = null;
     }
 
@@ -399,42 +401,6 @@ public class Preprocessor implements Closeable {
     public void addMacro(@Nonnull String name)
             throws LexerException {
         addMacro(name, "1");
-    }
-
-    /**
-     * Sets the user include path used by this Preprocessor.
-     */
-    /* Note for future: Create an IncludeHandler? */
-    public void setQuoteIncludePath(@Nonnull List<String> path) {
-        this.quoteincludepath = path;
-    }
-
-    /**
-     * Returns the user include-path of this Preprocessor.
-     *
-     * This list may be freely modified by user code.
-     */
-    @Nonnull
-    public List<String> getQuoteIncludePath() {
-        return quoteincludepath;
-    }
-
-    /**
-     * Sets the system include path used by this Preprocessor.
-     */
-    /* Note for future: Create an IncludeHandler? */
-    public void setSystemIncludePath(@Nonnull List<String> path) {
-        this.sysincludepath = path;
-    }
-
-    /**
-     * Returns the system include-path of this Preprocessor.
-     *
-     * This list may be freely modified by user code.
-     */
-    @Nonnull
-    public List<String> getSystemIncludePath() {
-        return sysincludepath;
     }
 
     /**
@@ -1139,31 +1105,11 @@ public class Preprocessor implements Closeable {
     protected boolean include(@Nonnull VirtualFile file)
             throws IOException {
         // System.out.println("Try to include " + ((File)file).getAbsolutePath());
-        if (!file.isFile())
-            return false;
         if (getFeature(Feature.DEBUG))
             LOG.debug("pp: including " + file);
         includes.add(file);
         push_source(file.getSource(), true);
         return true;
-    }
-
-    /**
-     * Attempts to include a file from an include path, by name.
-     *
-     * @param path The list of virtual directories to search for the given name.
-     * @param name The name of the file to attempt to include.
-     * @return true if the file was successfully included, false otherwise.
-     * @throws IOException if an I/O error occurs.
-     */
-    protected boolean include(@Nonnull Iterable<String> path, @Nonnull String name)
-            throws IOException {
-        for (String dir : path) {
-            VirtualFile file = getFileSystem().getFile(dir, name);
-            if (include(file))
-                return true;
-        }
-        return false;
     }
 
     /**
@@ -1173,62 +1119,23 @@ public class Preprocessor implements Closeable {
      * @throws LexerException if the include fails, and the error handler is fatal.
      */
     private void include(
-            @CheckForNull String parent, int line,
-            @Nonnull String name, boolean quoted, boolean next)
+            int line,
+            @Nonnull String name)
             throws IOException,
             LexerException {
-        if (name.startsWith("/")) {
-            VirtualFile file = filesystem.getFile(name);
-            if (include(file))
-                return;
-            StringBuilder buf = new StringBuilder();
-            buf.append("File not found: ").append(name);
-            error(line, 0, buf.toString());
+        VirtualFile file = filesystem.getFile(name);
+        if (file != null && include(file)) {
             return;
         }
-
-        VirtualFile pdir = null;
-        if (quoted) {
-            if (parent != null) {
-                VirtualFile pfile = filesystem.getFile(parent);
-                pdir = pfile.getParentFile();
-            }
-            if (pdir != null) {
-                VirtualFile ifile = pdir.getChildFile(name);
-                if (include(ifile))
-                    return;
-            }
-            if (include(quoteincludepath, name))
-                return;
-        } else {
-            int idx = name.indexOf('/');
-            if (idx != -1) {
-                String frameworkName = name.substring(0, idx);
-                String headerName = name.substring(idx + 1);
-                String headerPath = frameworkName + ".framework/Headers/" + headerName;
-                if (include(frameworkspath, headerPath))
-                    return;
-            }
-        }
-
-        if (include(sysincludepath, name))
-            return;
-
         StringBuilder buf = new StringBuilder();
-        buf.append("File not found: ").append(name);
-        buf.append(" in");
-        if (quoted) {
-            buf.append(" .").append('(').append(pdir).append(')');
-            for (String dir : quoteincludepath)
-                buf.append(" ").append(dir);
-        }
-        for (String dir : sysincludepath)
-            buf.append(" ").append(dir);
+        buf.append("Script file not found: ").append(name);
         error(line, 0, buf.toString());
+        return;
+
     }
 
     @Nonnull
-    private Token include(boolean next)
+    private Token include()
             throws IOException,
             LexerException {
         LexerSource lexer = (LexerSource) source;
@@ -1237,33 +1144,10 @@ public class Preprocessor implements Closeable {
             Token tok = token_nonwhite();
 
             String name;
-            boolean quoted;
 
-            if (tok.getType() == STRING) {
-                /* XXX Use the original text, not the value.
-                 * Backslashes must not be treated as escapes here. */
-                StringBuilder buf = new StringBuilder((String) tok.getValue());
-                HEADER:
-                for (;;) {
-                    tok = token_nonwhite();
-                    switch (tok.getType()) {
-                        case STRING:
-                            buf.append((String) tok.getValue());
-                            break;
-                        case NL:
-                        case EOF:
-                            break HEADER;
-                        default:
-                            warning(tok,
-                                    "Unexpected token on #" + "include line");
-                            return source_skipline(false);
-                    }
-                }
-                name = buf.toString();
-                quoted = true;
-            } else if (tok.getType() == HEADER) {
+            // FOCONIS: We only support the "#include <vfsname>" syntax
+            if (tok.getType() == HEADER) {
                 name = (String) tok.getValue();
-                quoted = false;
                 tok = source_skipline(true);
             } else {
                 error(tok,
@@ -1279,7 +1163,7 @@ public class Preprocessor implements Closeable {
             }
 
             /* Do the inclusion. */
-            include(source.getPath(), tok.getLine(), name, quoted, next);
+            include(tok.getLine(), name);
 
             /* 'tok' is the 'nl' after the include. We use it after the
              * #line directive. */
@@ -1312,76 +1196,6 @@ public class Preprocessor implements Closeable {
             }
         }
         warning(name, "Unknown #" + "pragma: " + name.getText());
-    }
-
-    @Nonnull
-    private Token pragma()
-            throws IOException,
-            LexerException {
-        Token name;
-
-        NAME:
-        for (;;) {
-            Token tok = source_token();
-            switch (tok.getType()) {
-                case EOF:
-                    /* There ought to be a newline before EOF.
-                     * At least, in any skipline context. */
-                    /* XXX Are we sure about this? */
-                    warning(tok,
-                            "End of file in #" + "pragma");
-                    return tok;
-                case NL:
-                    /* This may contain one or more newlines. */
-                    warning(tok,
-                            "Empty #" + "pragma");
-                    return tok;
-                case CCOMMENT:
-                case CPPCOMMENT:
-                case WHITESPACE:
-                    continue NAME;
-                case IDENTIFIER:
-                    name = tok;
-                    break NAME;
-                default:
-                    warning(tok,
-                            "Illegal #" + "pragma " + tok.getText());
-                    return source_skipline(false);
-            }
-        }
-
-        Token tok;
-        List<Token> value = new ArrayList<Token>();
-        VALUE:
-        for (;;) {
-            tok = source_token();
-            switch (tok.getType()) {
-                case EOF:
-                    /* There ought to be a newline before EOF.
-                     * At least, in any skipline context. */
-                    /* XXX Are we sure about this? */
-                    warning(tok,
-                            "End of file in #" + "pragma");
-                    break VALUE;
-                case NL:
-                    /* This may contain one or more newlines. */
-                    break VALUE;
-                case CCOMMENT:
-                case CPPCOMMENT:
-                    break;
-                case WHITESPACE:
-                    value.add(tok);
-                    break;
-                default:
-                    value.add(tok);
-                    break;
-            }
-        }
-
-        pragma(name, value);
-
-        return tok;	/* The NL. */
-
     }
 
     /* For #error and #warning. */
@@ -1963,18 +1777,7 @@ public class Preprocessor implements Closeable {
                             if (!isActive())
                                 return source_skipline(false);
                             else
-                                return include(false);
-                        // break;
-                        case PP_INCLUDE_NEXT:
-                            if (!isActive())
-                                return source_skipline(false);
-                            if (!getFeature(Feature.INCLUDENEXT)) {
-                                error(tok,
-                                        "Directive include_next not enabled"
-                                );
-                                return source_skipline(false);
-                            }
-                            return include(true);
+                                return include();
                         // break;
 
                         case PP_WARNING:
@@ -2092,12 +1895,6 @@ public class Preprocessor implements Closeable {
 
                         case PP_LINE:
                             return source_skipline(false);
-                        // break;
-
-                        case PP_PRAGMA:
-                            if (!isActive())
-                                return source_skipline(false);
-                            return pragma();
                         // break;
 
                         default:

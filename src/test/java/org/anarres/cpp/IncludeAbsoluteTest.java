@@ -19,13 +19,19 @@ public class IncludeAbsoluteTest {
 
     @Test
     public void testAbsoluteInclude() throws Exception {
-        File file = new File("build/resources/test/absolute.h");
-        assertTrue(file.exists());
 
-        String input = "#include <" + file.getAbsolutePath() + ">\n";
+
+        String input = "#include <testpath>\n";
         LOG.info("Input: " + input);
         Preprocessor pp = new Preprocessor();
         pp.addInput(new StringLexerSource(input, true));
+        pp.setFileSystem(name -> {
+          if (name.equals("testpath")) {
+            return new StringVirtualFile(name, "absolute-result");
+          } else {
+            return null;
+          }
+        });
         Reader r = new CppReader(pp);
         String output = CharStreams.toString(r);
         r.close();

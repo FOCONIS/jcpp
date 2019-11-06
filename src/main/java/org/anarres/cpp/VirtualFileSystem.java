@@ -14,8 +14,10 @@
  * or implied.  See the License for the specific language governing
  * permissions and limitations under the License.
  */
+
 package org.anarres.cpp;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 /**
@@ -23,9 +25,7 @@ import javax.annotation.Nonnull;
  */
 public interface VirtualFileSystem {
 
-    @Nonnull
-    public VirtualFile getFile(@Nonnull String path);
+	@CheckForNull
+	public VirtualFile getFile(@Nonnull String path);
 
-    @Nonnull
-    public VirtualFile getFile(@Nonnull String dir, @Nonnull String name);
 }

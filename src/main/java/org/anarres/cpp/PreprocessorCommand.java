@@ -24,11 +24,8 @@ public enum PreprocessorCommand {
     PP_IFNDEF("ifndef"),
     PP_INCLUDE("include"),
     PP_LINE("line"),
-    PP_PRAGMA("pragma"),
     PP_UNDEF("undef"),
-    PP_WARNING("warning"),
-    PP_INCLUDE_NEXT("include_next"),
-    PP_IMPORT("import");
+    PP_WARNING("warning");
     private final String text;
     /* pp */ PreprocessorCommand(String text) {
         this.text = text;

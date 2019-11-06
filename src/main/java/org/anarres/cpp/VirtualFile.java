@@ -14,10 +14,11 @@
  * or implied.  See the License for the specific language governing
  * permissions and limitations under the License.
  */
+
 package org.anarres.cpp;
 
 import java.io.IOException;
-import javax.annotation.CheckForNull;
+
 import javax.annotation.Nonnull;
 
 /**
@@ -25,21 +26,9 @@ import javax.annotation.Nonnull;
  */
 public interface VirtualFile {
 
-    // public String getParent();
-    public boolean isFile();
+	@Nonnull
+	public String getName();
 
-    @Nonnull
-    public String getPath();
-
-    @Nonnull
-    public String getName();
-
-    @CheckForNull
-    public VirtualFile getParentFile();
-
-    @Nonnull
-    public VirtualFile getChildFile(String name);
-
-    @Nonnull
-    public Source getSource() throws IOException;
+	@Nonnull
+	public Source getSource() throws IOException;
 }

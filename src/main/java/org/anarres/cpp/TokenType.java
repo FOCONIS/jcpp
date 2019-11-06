@@ -60,7 +60,11 @@ import static org.anarres.cpp.Token.*;
     static {
         for (int i = 0; i < 255; i++) {
             String text = String.valueOf((char) i);
-            addTokenType(i, text, text);
+            String name = text;
+            if (i < 32 || i > 128) {
+              name = "#" + i;
+            }
+            addTokenType(i, name, text);
         }
         addTokenType(AND_EQ, "AND_EQ", "&=");
         addTokenType(ARROW, "ARROW", "->");
