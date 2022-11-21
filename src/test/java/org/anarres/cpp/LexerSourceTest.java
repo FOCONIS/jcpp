@@ -1,145 +1,174 @@
 package org.anarres.cpp;
 
-import java.util.Arrays;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
+
 import static org.anarres.cpp.PreprocessorTest.assertType;
-import static org.anarres.cpp.Token.*;
-import static org.junit.Assert.*;
+import static org.anarres.cpp.Token.AND_EQ;
+import static org.anarres.cpp.Token.CCOMMENT;
+import static org.anarres.cpp.Token.CHARACTER;
+import static org.anarres.cpp.Token.CPPCOMMENT;
+import static org.anarres.cpp.Token.DIV_EQ;
+import static org.anarres.cpp.Token.EOF;
+import static org.anarres.cpp.Token.GE;
+import static org.anarres.cpp.Token.HASH;
+import static org.anarres.cpp.Token.IDENTIFIER;
+import static org.anarres.cpp.Token.INVALID;
+import static org.anarres.cpp.Token.LE;
+import static org.anarres.cpp.Token.LSH_EQ;
+import static org.anarres.cpp.Token.MOD_EQ;
+import static org.anarres.cpp.Token.MULT_EQ;
+import static org.anarres.cpp.Token.NUMBER;
+import static org.anarres.cpp.Token.OR_EQ;
+import static org.anarres.cpp.Token.PASTE;
+import static org.anarres.cpp.Token.PLUS_EQ;
+import static org.anarres.cpp.Token.RSH_EQ;
+import static org.anarres.cpp.Token.SQSTRING;
+import static org.anarres.cpp.Token.SUB_EQ;
+import static org.anarres.cpp.Token.WHITESPACE;
+import static org.anarres.cpp.Token.XOR_EQ;
+import static org.junit.Assert.assertEquals;
 
 public class LexerSourceTest {
 
-    private static final Logger LOG = LoggerFactory.getLogger(LexerSourceTest.class);
+	private static final Logger LOG = LoggerFactory.getLogger(LexerSourceTest.class);
 
-    public static void testLexerSource(String in, boolean textmatch, int... out)
-            throws Exception {
-        LOG.info("Testing '" + in + "' => "
-                + Arrays.toString(out));
-        StringLexerSource s = new StringLexerSource(in);
+	public static void testLexerSource(String in, boolean textmatch, int... out)
+			throws Exception {
+		LOG.info("Testing '" + in + "' => "
+				+ Arrays.toString(out));
+		StringLexerSource s = new StringLexerSource(in);
 
-        StringBuilder buf = new StringBuilder();
-        for (int i = 0; i < out.length; i++) {
-            Token tok = s.token();
-            LOG.info("Token is " + tok);
-            assertType(out[i], tok);
-            // assertEquals(col, tok.getColumn());
-            buf.append(tok.getText());
-        }
+		StringBuilder buf = new StringBuilder();
+		for (int i = 0; i < out.length; i++) {
+			Token tok = s.token();
+			LOG.info("Token is " + tok);
+			assertType(out[i], tok);
+			// assertEquals(col, tok.getColumn());
+			buf.append(tok.getText());
+		}
 
-        Token tok = s.token();
-        LOG.info("Token is " + tok);
-        assertType(EOF, tok);
+		Token tok = s.token();
+		LOG.info("Token is " + tok);
+		assertType(EOF, tok);
 
-        if (textmatch)
-            assertEquals(in, buf.toString());
-    }
+		if (textmatch)
+			assertEquals(in, buf.toString());
+	}
 
-    @Test
-    public void testLexerSource()
-            throws Exception {
+	@Test
+	public void testLexerSource()
+			throws Exception {
 
-        testLexerSource("int a = 5;", true,
-                IDENTIFIER, WHITESPACE, IDENTIFIER, WHITESPACE,
-                '=', WHITESPACE, NUMBER, ';'
-        );
+		testLexerSource("int a = 5;", true,
+				IDENTIFIER, WHITESPACE, IDENTIFIER, WHITESPACE,
+				'=', WHITESPACE, NUMBER, ';'
+		);
 
-        // \n is WHITESPACE because ppvalid = false
-        testLexerSource("# #   \r\n\n\r \rfoo", true,
-                HASH, WHITESPACE, '#', WHITESPACE, IDENTIFIER
-        );
+		// \n is WHITESPACE because ppvalid = false
+		testLexerSource("# #   \r\n\n\r \rfoo", true,
+				HASH, WHITESPACE, '#', WHITESPACE, IDENTIFIER
+		);
 
-        // No match - trigraphs
-        testLexerSource("%:%:", false, PASTE);
-        testLexerSource("%:?", false, '#', '?');
-        testLexerSource("%:%=", false, '#', MOD_EQ);
+		// No match - trigraphs
+		testLexerSource("%:%:", false, PASTE);
+		testLexerSource("%:?", false, '#', '?');
+		testLexerSource("%:%=", false, '#', MOD_EQ);
 
-        testLexerSource("0x1234ffdUL 0765I", true,
-                NUMBER, WHITESPACE, NUMBER);
+		testLexerSource("0x1234ffdUL 0765I", true,
+				NUMBER, WHITESPACE, NUMBER);
 
-        testLexerSource("+= -= *= /= %= <= >= >>= <<= &= |= ^= x", true,
-                PLUS_EQ, WHITESPACE,
-                SUB_EQ, WHITESPACE,
-                MULT_EQ, WHITESPACE,
-                DIV_EQ, WHITESPACE,
-                MOD_EQ, WHITESPACE,
-                LE, WHITESPACE,
-                GE, WHITESPACE,
-                RSH_EQ, WHITESPACE,
-                LSH_EQ, WHITESPACE,
-                AND_EQ, WHITESPACE,
-                OR_EQ, WHITESPACE,
-                XOR_EQ, WHITESPACE,
-                IDENTIFIER);
+		testLexerSource("+= -= *= /= %= <= >= >>= <<= &= |= ^= x", true,
+				PLUS_EQ, WHITESPACE,
+				SUB_EQ, WHITESPACE,
+				MULT_EQ, WHITESPACE,
+				DIV_EQ, WHITESPACE,
+				MOD_EQ, WHITESPACE,
+				LE, WHITESPACE,
+				GE, WHITESPACE,
+				RSH_EQ, WHITESPACE,
+				LSH_EQ, WHITESPACE,
+				AND_EQ, WHITESPACE,
+				OR_EQ, WHITESPACE,
+				XOR_EQ, WHITESPACE,
+				IDENTIFIER);
 
-        testLexerSource("/**/", true, CCOMMENT);
-        testLexerSource("/* /**/ */", true, CCOMMENT, WHITESPACE, '*', '/');
-        testLexerSource("/** ** **/", true, CCOMMENT);
-        testLexerSource("//* ** **/", true, CPPCOMMENT);
-        testLexerSource("'\\r' '\\xf' '\\xff' 'x' 'aa' ''", true,
-                CHARACTER, WHITESPACE,
-                CHARACTER, WHITESPACE,
-                CHARACTER, WHITESPACE,
-                CHARACTER, WHITESPACE,
-                SQSTRING, WHITESPACE,
-                SQSTRING);
+		testLexerSource("/**/", true, CCOMMENT);
+		testLexerSource("/* /**/ */", true, CCOMMENT, WHITESPACE, '*', '/');
+		testLexerSource("/** ** **/", true, CCOMMENT);
+		testLexerSource("//* ** **/", true, CPPCOMMENT);
+		testLexerSource("'\\r' '\\xf' '\\xff' 'x' 'aa' ''", true,
+				SQSTRING, WHITESPACE,
+				SQSTRING, WHITESPACE,
+				SQSTRING, WHITESPACE,
+				CHARACTER, WHITESPACE,
+				SQSTRING, WHITESPACE,
+				SQSTRING);
 
-        if (false)  // Actually, I think this is illegal.
-            testLexerSource("1i1I1l1L1ui1ul", true,
-                    NUMBER, NUMBER,
-                    NUMBER, NUMBER,
-                    NUMBER, NUMBER);
+		if (false)  // Actually, I think this is illegal.
+			testLexerSource("1i1I1l1L1ui1ul", true,
+					NUMBER, NUMBER,
+					NUMBER, NUMBER,
+					NUMBER, NUMBER);
 
-        testLexerSource("'' 'x' 'xx'", true,
-                SQSTRING, WHITESPACE, CHARACTER, WHITESPACE, SQSTRING);
-    }
+		testLexerSource("'' 'x' 'xx'", true,
+				SQSTRING, WHITESPACE, CHARACTER, WHITESPACE, SQSTRING);
+	}
 
-    @Test
-    public void testNumbers() throws Exception {
-        testLexerSource("0", true, NUMBER);
-        testLexerSource("045", true, NUMBER);
-        testLexerSource("45", true, NUMBER);
-        testLexerSource("0.45", true, NUMBER);
-        testLexerSource("1.45", true, NUMBER);
-        testLexerSource("1e6", true, NUMBER);
-        testLexerSource("1.45e6", true, NUMBER);
-        testLexerSource(".45e6", true, NUMBER);
-        testLexerSource("-6", true, '-', NUMBER);
-    }
+	@Test
+	public void testNumbers() throws Exception {
+		testLexerSource("0", true, NUMBER);
+		testLexerSource("045", true, NUMBER);
+		testLexerSource("45", true, NUMBER);
+		testLexerSource("0.45", true, NUMBER);
+		testLexerSource("1.45", true, NUMBER);
+		testLexerSource("1e6", true, NUMBER);
+		testLexerSource("1.45e6", true, NUMBER);
+		testLexerSource(".45e6", true, NUMBER);
+		testLexerSource("-6", true, '-', NUMBER);
+	}
 
-    @Test
-    public void testNumbersSuffix() throws Exception {
-        testLexerSource("6f", true, NUMBER);
-        testLexerSource("6d", true, NUMBER);
-        testLexerSource("6l", true, NUMBER);
-        testLexerSource("6ll", true, NUMBER);
-        testLexerSource("6ul", true, NUMBER);
-        testLexerSource("6ull", true, NUMBER);
-        testLexerSource("6e3f", true, NUMBER);
-        testLexerSource("6e3d", true, NUMBER);
-        testLexerSource("6e3l", true, NUMBER);
-        testLexerSource("6e3ll", true, NUMBER);
-        testLexerSource("6e3ul", true, NUMBER);
-        testLexerSource("6e3ull", true, NUMBER);
-    }
+	@Test
+	public void testNumbersSuffix() throws Exception {
+		testLexerSource("6f", true, NUMBER);
+		testLexerSource("6d", true, NUMBER);
+		testLexerSource("6l", true, NUMBER);
+		testLexerSource("6ll", true, NUMBER);
+		testLexerSource("6ul", true, NUMBER);
+		testLexerSource("6ull", true, NUMBER);
+		testLexerSource("6e3f", true, NUMBER);
+		testLexerSource("6e3d", true, NUMBER);
+		testLexerSource("6e3l", true, NUMBER);
+		testLexerSource("6e3ll", true, NUMBER);
+		testLexerSource("6e3ul", true, NUMBER);
+		testLexerSource("6e3ull", true, NUMBER);
+	}
 
-    @Test
-    public void testNumbersInvalid() throws Exception {
-        // testLexerSource("0x foo", true, INVALID, WHITESPACE, IDENTIFIER);   // FAIL
-        testLexerSource("6x foo", true, INVALID, WHITESPACE, IDENTIFIER);
-        testLexerSource("6g foo", true, INVALID, WHITESPACE, IDENTIFIER);
-        testLexerSource("6xsd foo", true, INVALID, WHITESPACE, IDENTIFIER);
-        testLexerSource("6gsd foo", true, INVALID, WHITESPACE, IDENTIFIER);
-    }
+	@Test
+	public void testNumbersInvalid() throws Exception {
+		// testLexerSource("0x foo", true, INVALID, WHITESPACE, IDENTIFIER);   // FAIL
+		testLexerSource("6x foo", true, INVALID, WHITESPACE, IDENTIFIER);
+		testLexerSource("6g foo", true, INVALID, WHITESPACE, IDENTIFIER);
+		testLexerSource("6xsd foo", true, INVALID, WHITESPACE, IDENTIFIER);
+		testLexerSource("6gsd foo", true, INVALID, WHITESPACE, IDENTIFIER);
+	}
 
-    @Test
-    public void testUnterminatedComment() throws Exception {
-        testLexerSource("5 /*", false, NUMBER, WHITESPACE, INVALID);    // Bug #15
-        testLexerSource("5 //", false, NUMBER, WHITESPACE, CPPCOMMENT);
-    }
+	@Test
+	public void testUnterminatedComment() throws Exception {
+		testLexerSource("5 /*", false, NUMBER, WHITESPACE, INVALID);    // Bug #15
+		testLexerSource("5 //", false, NUMBER, WHITESPACE, CPPCOMMENT);
+	}
 
-    @Test
-    public void testUnicode()throws Exception{
-        testLexerSource("foo \u2018bar\u2019 baz", true, IDENTIFIER, WHITESPACE, 8216, IDENTIFIER, 8217, WHITESPACE, IDENTIFIER);
-    }
+	@Test
+	public void testEscapeChar() throws Exception {
+		testLexerSource("match('a\\s')", true, IDENTIFIER, '(', SQSTRING,')');
+	}
+
+	@Test
+	public void testUnicode() throws Exception {
+		testLexerSource("foo \u2018bar\u2019 baz", true, IDENTIFIER, WHITESPACE, 8216, IDENTIFIER, 8217, WHITESPACE, IDENTIFIER);
+	}
 }
